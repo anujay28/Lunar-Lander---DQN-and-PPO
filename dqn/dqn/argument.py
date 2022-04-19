@@ -10,7 +10,7 @@ def add_arguments(parser):
     parser.add_argument('--env_name', default=None, help='environment name')
     parser.add_argument('--train_dqn', action='store_true', help='whether train DQN')
     parser.add_argument('--test_dqn', action='store_true', help='whether test DQN')
-    parser.add_argument('--batch_size', type=int, default=32,help = 'batch size')
+    parser.add_argument('--bs', type=int, default=32,help = 'batch size')
     parser.add_argument('--max_episodes', type=int, default=10000,help = 'number of episode to terminate')
     parser.add_argument('--gamma', type=float, default=0.99,help='gamma')
     parser.add_argument('--eps', type=float, default=1.0,help ='epsilon')

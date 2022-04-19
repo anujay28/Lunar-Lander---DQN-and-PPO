@@ -1,7 +1,7 @@
 import argparse
 from test import test
 from environment import Environment
-
+import gym
 
 def parse():
     parser = argparse.ArgumentParser(description="DS595/CS525 RL Project 3")
