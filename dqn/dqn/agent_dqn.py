@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from calendar import c
-from html import entities
 import random
 import numpy as np
 from collections import deque
@@ -17,7 +15,8 @@ import torch.nn as nn
 import torchvision
 from torch.autograd import Variable
 import wandb
-
+import gym
+from gym.wrappers import Monitor
 from agent import Agent
 from dqn_model import DQN
 """
@@ -27,12 +26,11 @@ you can import any package and define any extra function as you need
 torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
-device = torch.device("cuda" if torch.cuda.is_available() else cpu )
+device = torch.device("cuda" if torch.cuda.is_available() else cpu)
+wandb.init(project='proj4',entity = 'aukkawut',monitor_gym = True)
 
 class Agent_DQN(Agent):
     def __init__(self, env,args,test=False):
-        if not test:
-            wandb.init(project='proj4',entity = 'aukkawut')
         super(Agent_DQN,self).__init__(env)
         self.nA = env.action_space.n
         self.A = np.arange(self.nA)
@@ -44,22 +42,22 @@ class Agent_DQN(Agent):
         self.Q_hat_net = DQN(self.nA).to(device)
         self.criterion = nn.MSELoss() #for empirical mean part
         #arguments
-        self.batch_size = 32 #batch size
+        #self.batch_size = 32 #batch size
         self.optimizer = optim.Adam(self.Q_net.parameters(),lr=0.00002, eps=0.001) #optimizer
         self.mem_init_size = 50000
-        self.epsilon = 1
-        self.epsilon_delta = (0.9 - 0.0001) / 1000000
+        self.epsilon = 0.99
+        self.epsilon_delta = (0.99 - 0.001) / 1000000
         self.P = np.zeros(self.nA, np.float32)
         self.args = args
         self.window = 100
-        self.max_episodes = 100000
+        self.max_episodes = 50000
         self.save_freq = 100
-        self.work_dir = './model/'
+        self.work_dir = './model/model2/'
         self.eps_min = 0.001
         self.sync_period = 100
         self.batch_size = 4
-        self.learn_freq = 4
-        self.gamma = 0.99
+        self.learn_freq = 2
+        self.gamma = 0.8
     def reset(self):
         return self.env.reset()
 
@@ -75,9 +73,20 @@ class Agent_DQN(Agent):
             torch.Tensor([r]), ns, torch.Tensor([done])))
         return ns, r, done, q.item()
 
-    def make_action(self,state):
-        a = self.action(state,0.002,ap = True)
+    def make_action(self,state,current_epsilon):
+        a = self.action(state,current_epsilon,ap = True)
         return a
+
+    def test(self,  current_epsilon):
+        envp = Monitor(gym.make('LunarLander-v2'),'./video2/',resume=True)
+        rewards = []
+        state = envp.reset()
+        #agent.init_game_setting()
+        done = False
+        #playing one game
+        while(not done):
+            action = self.make_action(state,current_epsilon)
+            state, reward, done, info = envp.step(action)
 
 
     def train(self):
@@ -89,6 +98,7 @@ class Agent_DQN(Agent):
             s = self.reset() if done else ns
         Reward = np.zeros(self.window, np.float32)
         Qfunc = np.zeros(self.window, np.float32)
+        current_epsilon = self.epsilon
         for episode in range(self.max_episodes):
             Reward[episode % self.window] = 0
             Qfunc[episode % self.window] = -1e10
@@ -100,6 +110,7 @@ class Agent_DQN(Agent):
                 model_file = os.path.join(self.work_dir, 'model_e%d.pth' % episode)
                 with open(model_file, 'wb') as f:
                     torch.save(self.Q_net, f)
+                self.test(current_epsilon)
                 
 
             while not done:
@@ -120,8 +131,7 @@ class Agent_DQN(Agent):
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-            if not self.test:
-                wandb.log({'episode':episode,'step':t,'eps':current_epsilon,'reward':Reward[episode % self.window],'q': Qfunc[episode % self.window]})
+            wandb.log({'episode':episode,'step':t,'eps':current_epsilon,'reward':Reward[episode % self.window],'q': Qfunc[episode % self.window]})
         return self.Q_net    
             
 def tuple2tensor(ts):
