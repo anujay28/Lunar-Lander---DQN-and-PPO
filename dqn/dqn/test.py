@@ -8,7 +8,8 @@ DO NOT revise this file
 import argparse
 import numpy as np
 from environment import Environment
-
+import gym
+from gym.wrappers import Monitor
 seed = 11037
 
 def parse():
@@ -28,13 +29,13 @@ def test(agent, env, total_episodes=30):
     env.seed(seed)
     for i in range(total_episodes):
         state = env.reset()
-        agent.init_game_setting()
+        #agent.init_game_setting()
         done = False
         episode_reward = 0.0
 
         #playing one game
         while(not done):
-            action = agent.make_action(state, test=True)
+            action = agent.make_action(state)
             state, reward, done, info = env.step(action)
             episode_reward += reward
 
@@ -45,10 +46,10 @@ def test(agent, env, total_episodes=30):
 
 def run(args):
     if args.test_dqn:
-        env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True, test=True)
+        env = Monitor(gym.make('LunarLander-v2'),'./video',force=True)
         from agent_dqn import Agent_DQN
-        agent = Agent_DQN(env, args)
-        test(agent, env, total_episodes=100)
+        agent = Agent_DQN(env, args, test=True)
+        test(agent, env)
 
 
 if __name__ == '__main__':

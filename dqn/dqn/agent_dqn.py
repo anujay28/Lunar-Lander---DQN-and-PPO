@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from calendar import c
 from html import entities
 import random
 import numpy as np
@@ -22,35 +23,40 @@ from dqn_model import DQN
 """
 you can import any package and define any extra function as you need
 """
-wandb.init(project='proj4',entity = 'aukkawut')
+
 torch.manual_seed(595)
 np.random.seed(595)
 random.seed(595)
 device = torch.device("cuda" if torch.cuda.is_available() else cpu )
 
 class Agent_DQN(Agent):
-    def __init__(self, env,args):
+    def __init__(self, env,args,test=False):
+        if not test:
+            wandb.init(project='proj4',entity = 'aukkawut')
         super(Agent_DQN,self).__init__(env)
         self.nA = env.action_space.n
         self.A = np.arange(self.nA)
         self.mem = Replay(1000000)
-        self.Q_net = DQN(self.nA).to(device)
+        if test:
+            self.Q_net = torch.load('./model/model_e9900.pth')
+        else:
+            self.Q_net = DQN(self.nA).to(device)
         self.Q_hat_net = DQN(self.nA).to(device)
         self.criterion = nn.MSELoss() #for empirical mean part
         #arguments
         self.batch_size = 32 #batch size
-        self.optimizer = optim.Adam(self.Q_net.parameters(),lr=0.0002, eps=0.001) #optimizer
+        self.optimizer = optim.Adam(self.Q_net.parameters(),lr=0.00002, eps=0.001) #optimizer
         self.mem_init_size = 50000
-        self.epsilon = 0.9
+        self.epsilon = 1
         self.epsilon_delta = (0.9 - 0.0001) / 1000000
         self.P = np.zeros(self.nA, np.float32)
         self.args = args
         self.window = 100
-        self.max_episodes = 10000
+        self.max_episodes = 100000
         self.save_freq = 100
         self.work_dir = './model/'
-        self.eps_min = 0.0001
-        self.sync_period = 10000
+        self.eps_min = 0.001
+        self.sync_period = 100
         self.batch_size = 4
         self.learn_freq = 4
         self.gamma = 0.99
@@ -62,17 +68,15 @@ class Agent_DQN(Agent):
         q, argq = self.Q_net(Variable(torch.from_numpy(state).to(device), volatile=True)).data.cpu().max(0)
         self.P[argq.item()] += 1 - epsilon
         a = np.random.choice(self.A, p=self.P)
+        if ap:
+            return a
         ns, r, done, _ = self.env.step(a)
         self.mem.push((state, torch.LongTensor([int(a)]),
             torch.Tensor([r]), ns, torch.Tensor([done])))
-        if not ap:
-            return ns, r, done, q.item()
-        else:
-            return ns, r, done, q.item(), a
+        return ns, r, done, q.item()
 
-    def make_action(self,state,test=True):
-        if test:
-            ns,r,done, q,a = self.action(state,a = True)
+    def make_action(self,state):
+        a = self.action(state,0.002,ap = True)
         return a
 
 
@@ -96,6 +100,7 @@ class Agent_DQN(Agent):
                 model_file = os.path.join(self.work_dir, 'model_e%d.pth' % episode)
                 with open(model_file, 'wb') as f:
                     torch.save(self.Q_net, f)
+                
 
             while not done:
                 if t % self.sync_period == 0:
@@ -115,7 +120,8 @@ class Agent_DQN(Agent):
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-            wandb.log({'episode':episode,'step':t,'eps':current_epsilon,'reward':Reward[episode % self.window],'q': Qfunc[episode % self.window]})
+            if not self.test:
+                wandb.log({'episode':episode,'step':t,'eps':current_epsilon,'reward':Reward[episode % self.window],'q': Qfunc[episode % self.window]})
         return self.Q_net    
             
 def tuple2tensor(ts):

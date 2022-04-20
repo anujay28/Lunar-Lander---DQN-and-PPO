@@ -26,7 +26,7 @@ def run(args):
         agent.train()
 
     if args.test_dqn:
-        env = gym.make(env_name)
+        env = gym.make('LunarLander-v2')
         from agent_dqn import Agent_DQN
         agent = Agent_DQN(env, args)
         test(agent, env, total_episodes=100)
