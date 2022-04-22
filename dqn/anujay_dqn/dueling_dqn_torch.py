@@ -39,13 +39,14 @@ class ReplayBuffer(object):
 
 
 class DuelingLinearDeepQNetwork(nn.Module):
-    def __init__(self, ALPHA, n_actions, name, input_dims, chkpt_dir='tmp/dqn'):
+    def __init__(self, ALPHA, n_actions, name, input_dims, chkpt_dir='./tmp/dqn',num_layers=2,hidden_dim=128):
         super(DuelingLinearDeepQNetwork, self).__init__()
 
         self.fc1 = nn.Linear(*input_dims, 128)
         self.fc2 = nn.Linear(128, 128)
-        self.V = nn.Linear(128, 1)
-        self.A = nn.Linear(128, n_actions)
+        self.linears = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for i in range(num_layers-1)])
+        self.V = nn.Linear(hidden_dim, 1)
+        self.A = nn.Linear(hidden_dim, n_actions)
 
         self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
         self.loss = nn.MSELoss()
@@ -57,6 +58,8 @@ class DuelingLinearDeepQNetwork(nn.Module):
     def forward(self, state):
         l1 = F.relu(self.fc1(state))
         l2 = F.relu(self.fc2(l1))
+        for i in range(len(self.linears)):
+            l2 = F.relu(self.linears[i](l2))
         V = self.V(l2)
         A = self.A(l2)
 
@@ -73,7 +76,7 @@ class DuelingLinearDeepQNetwork(nn.Module):
 class Agent(object):
     def __init__(self, gamma, epsilon, alpha, n_actions, input_dims,
                  mem_size, batch_size, eps_min=0.01, eps_dec=5e-7,
-                 replace=1000, chkpt_dir='tmp/dqn'):
+                 replace=1000, chkpt_dir='./tmp/dqn',num_layers = 2, hidden_dim = 128):
         self.gamma = gamma
         self.epsilon = epsilon
         self.eps_min = eps_min
@@ -85,9 +88,9 @@ class Agent(object):
         self.memory = ReplayBuffer(mem_size, input_dims, n_actions)
 
         self.q_eval = DuelingLinearDeepQNetwork(alpha, n_actions, input_dims=input_dims,
-                                   name='q_eval', chkpt_dir=chkpt_dir)
+                                   name='q_eval', chkpt_dir=chkpt_dir,num_layers=num_layers,hidden_dim=hidden_dim)
         self.q_next = DuelingLinearDeepQNetwork(alpha, n_actions, input_dims=input_dims,
-                                   name='q_next', chkpt_dir=chkpt_dir)
+                                   name='q_next', chkpt_dir=chkpt_dir,num_layers=num_layers,hidden_dim=hidden_dim)
 
     def store_transition(self, state, action, reward, state_, done):
         self.memory.store_transition(state, action, reward, state_, done)

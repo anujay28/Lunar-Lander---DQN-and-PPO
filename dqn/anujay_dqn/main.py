@@ -1,21 +1,22 @@
 import gym, time
+from gym.wrappers import Monitor
 import numpy as np
 import matplotlib.pyplot as plt
 from dueling_dqn_torch import Agent
 from utils import plotLearning
+import wandb
 
-if __name__ == '__main__':
-    env = gym.make('LunarLander-v2')
-    num_games = 1000
-    load_checkpoint = False
 
-    agent = Agent(gamma=0.99, epsilon=1.0, alpha=5e-4,
-                  input_dims=[8], n_actions=4, mem_size=100000, eps_min=0.01,
-                  batch_size=64, eps_dec=1e-3, replace=100)
-
+def train(load_checkpoint = False):
+    wandb.init(project='proj4',entity='aukkawut',monitor_gym=True)
+    agent = Agent(gamma=wandb.config.gamma, epsilon=wandb.config.epsilon, alpha=wandb.config.alpha,
+                  input_dims=[8], n_actions=4, mem_size=wandb.config.mem_size, eps_min=wandb.config.eps_min,
+                  batch_size=wandb.config.batch_size, eps_dec=wandb.config.eps_dec, replace=wandb.config.replace, 
+                  num_layers=wandb.config.num_layers, hidden_dim=wandb.config.hidden_dim)
     if load_checkpoint:
         agent.load_models()
-
+    env = Monitor(gym.make('LunarLander-v2'),'./video', resume = True)
+    num_games = 1000
     filename = 'LunarLander-Dueling-128-128-Adam-lr0005-replace100.png'
     scores = []
     eps_history = []
@@ -43,10 +44,60 @@ if __name__ == '__main__':
         print('episode: ', i,'score %.1f ' % score,
              ' average score %.1f' % avg_score,
             'epsilon %.2f' % agent.epsilon)
-        #if i > 0 and i % 10 == 0:
-        #    agent.save_models()
+        wandb.log({'reward':score, 'episode':i,'eps':agent.epsilon})
+        if i > 0 and i % 10 == 0:
+            agent.save_models()
 
         eps_history.append(agent.epsilon)
 
     x = [i+1 for i in range(num_games)]
     plotLearning(x, scores, eps_history, filename)
+
+if __name__ == '__main__':
+    sweep_config = {"name" : "param_tuning",
+  "method" : "random",
+  'parameters' : {
+    'gamma':{
+        'distribution': 'uniform',
+        'min': 0,
+        'max': 1,
+    },
+    'epsilon':{
+        'distribution': 'uniform',
+        'min': 1e-9,
+        'max': 1,
+    },
+    'eps_min':{
+        'distribution': 'uniform',
+        'min': 1e-9,
+        'max': 1,
+    },
+    'alpha':{
+        'distribution': 'uniform',
+        'min': 1e-1,
+        'max': 1e-10,
+    },
+    'mem_size':{
+        'values': [1e4,5e4,1e5,5e5,1e6,5e6, 1e7, 5e7,1e8,5e8]
+    },
+    'replace':{
+        'values': [1,10,50,100,200,500]
+    },
+    'batch_size':{
+        'values': [2,4,8,16,32,128,256]
+    },
+    'eps_dec':{
+        'distribution': 'uniform',
+        'min': 1e-1,
+        'max': 1e-5,
+    },
+    'num_layers':{
+        'values': [2,3,4,5,6,7,8,9,10]
+    },
+    'hidden_dim':{
+        'values': [16,32,64,128,256,512,1024]
+    }
+}
+}
+sweep_id = wandb.sweep(sweep_config)
+wandb.agent(sweep_id, function=train)
