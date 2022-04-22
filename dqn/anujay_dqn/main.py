@@ -8,7 +8,7 @@ import wandb
 
 
 def train(load_checkpoint = False):
-    wandb.init(project='proj4',entity='aukkawut',monitor_gym=True)
+    wandb.init(monitor_gym=True)
     agent = Agent(gamma=wandb.config.gamma, epsilon=wandb.config.epsilon, alpha=wandb.config.alpha,
                   input_dims=[8], n_actions=4, mem_size=wandb.config.mem_size, eps_min=wandb.config.eps_min,
                   batch_size=wandb.config.batch_size, eps_dec=wandb.config.eps_dec, replace=wandb.config.replace, 
@@ -74,8 +74,8 @@ if __name__ == '__main__':
     },
     'alpha':{
         'distribution': 'uniform',
-        'min': 1e-1,
-        'max': 1e-10,
+        'min': 1e-10,
+        'max': 1e-1,
     },
     'mem_size':{
         'values': [1e4,5e4,1e5,5e5,1e6,5e6, 1e7, 5e7,1e8,5e8]
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     },
     'eps_dec':{
         'distribution': 'uniform',
-        'min': 1e-1,
-        'max': 1e-5,
+        'min': 1e-5,
+        'max': 1e-1,
     },
     'num_layers':{
         'values': [2,3,4,5,6,7,8,9,10]
@@ -100,4 +100,4 @@ if __name__ == '__main__':
 }
 }
 sweep_id = wandb.sweep(sweep_config)
-wandb.agent(sweep_id, function=train)
+wandb.agent(sweep_id, function=train,project='proj4',entity='aukkawut',count=100)

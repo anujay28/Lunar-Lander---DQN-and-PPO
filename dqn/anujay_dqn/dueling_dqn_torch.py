@@ -43,7 +43,7 @@ class DuelingLinearDeepQNetwork(nn.Module):
         super(DuelingLinearDeepQNetwork, self).__init__()
 
         self.fc1 = nn.Linear(*input_dims, 128)
-        self.fc2 = nn.Linear(128, 128)
+        self.fc2 = nn.Linear(128, hidden_dim)
         self.linears = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for i in range(num_layers-1)])
         self.V = nn.Linear(hidden_dim, 1)
         self.A = nn.Linear(hidden_dim, n_actions)
