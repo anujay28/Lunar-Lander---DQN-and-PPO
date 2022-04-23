@@ -132,6 +132,7 @@ class Agent(object):
         new_state = T.tensor(new_state).to(self.q_eval.device)
         action = T.tensor(action).to(self.q_eval.device)
         rewards = T.tensor(reward).to(self.q_eval.device)
+        rewards = rewards.clamp(-200, 500)
         dones = T.tensor(done).to(self.q_eval.device)
 
         V_s, A_s = self.q_eval.forward(state)
