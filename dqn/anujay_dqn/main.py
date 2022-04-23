@@ -49,7 +49,7 @@ def train(load_checkpoint = False):
         print('episode: ', i,'score %.1f ' % score,
              ' average score %.1f' % avg_score,
             'epsilon %.2f' % agent.epsilon)
-        wandb.log({'reward':score, 'episode':i,'eps':agent.epsilon})
+        wandb.log({'reward':score, 'episode':i,'eps':agent.epsilon,'average_reward':avg_score})
         if i > 0 and i % 10 == 0:
             agent.save_models()
 
@@ -95,7 +95,7 @@ def manual_train(gamma=0.999,epsilon = 0.99,alpha = 1e-3,mem_size = 1000000,eps_
         print('episode: ', i,'score %.1f ' % score,
              ' average score %.1f' % avg_score,
             'epsilon %.2f' % agent.epsilon)
-        wandb.log({'reward':score, 'episode':i,'eps':agent.epsilon})
+        wandb.log({'reward':score, 'episode':i,'eps':agent.epsilon,'average_reward':avg_score})
         #if i > 0 and i % 10 == 0:
         #    agent.save_models()
 
