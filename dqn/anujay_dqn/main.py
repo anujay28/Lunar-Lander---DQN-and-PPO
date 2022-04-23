@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 from dueling_dqn_torch import Agent
 from utils import plotLearning
 import wandb
+import os
+import warnings
+warnings.simplefilter('ignore',UserWarning) #for ignoring masked_fill_
+os.environ['WANDB_ENTITY'] = 'aukkawut'
+os.environ['WANDB_PROJECT'] = 'proj4'
 
 
 def train(load_checkpoint = False):
