@@ -16,7 +16,7 @@ import numpy as np
 train_env = gym.make("LunarLander-v2")
 test_env = gym.make('LunarLander-v2')
 
-SEED = 1234
+SEED = 12
 
 train_env.seed(SEED);
 test_env.seed(SEED+1);
@@ -24,14 +24,14 @@ np.random.seed(SEED);
 torch.manual_seed(SEED);
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, dropout = 0.1):
+    def __init__(self, input_dimension, hidden_dimension, output_dim, dropout = 0.1):
         super().__init__()
         
         self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(input_dimension, hidden_dimension),
             nn.Dropout(dropout),
             nn.PReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dimension, hidden_dimension),
             nn.Dropout(dropout),
             nn.PReLU(),
             nn.Linear(hidden_dim, output_dim)
@@ -41,7 +41,7 @@ class MLP(nn.Module):
         x = self.net(x)
         return x
 
-class ActorCritic(nn.Module):
+class Actor(nn.Module):
     def __init__(self, actor, critic):
         super().__init__()
         
@@ -62,7 +62,7 @@ OUTPUT_DIM = train_env.action_space.n
 actor = MLP(INPUT_DIM, HIDDEN_DIM, OUTPUT_DIM)
 critic = MLP(INPUT_DIM, HIDDEN_DIM, 1)
 
-policy = ActorCritic(actor, critic)
+policy = Actor(actor, critic)
 def init_weights(m):
     if type(m) == nn.Linear:
         torch.nn.init.xavier_normal_(m.weight)
@@ -121,7 +121,7 @@ def train(env, policy, optimizer, discount_factor, ppo_steps, ppo_clip):
     returns = calculate_returns(rewards, discount_factor)
     advantages = calculate_advantages(returns, values)
     
-    policy_loss, value_loss = update_policy(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
+    policy_loss, value_loss = update(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip)
 
     return policy_loss, value_loss, episode_reward
 
@@ -149,7 +149,7 @@ def calculate_advantages(returns, values, normalize = True):
         advantages = (advantages - advantages.mean()) / advantages.std()
         
     return advantages
-def update_policy(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip):
+def update(policy, states, actions, log_prob_actions, advantages, returns, optimizer, ppo_steps, ppo_clip):
     
     total_policy_loss = 0 
     total_value_loss = 0
@@ -193,7 +193,7 @@ def update_policy(policy, states, actions, log_prob_actions, advantages, returns
         total_value_loss += value_loss.item()
     
     return total_policy_loss / ppo_steps, total_value_loss / ppo_steps
-def evaluate(env, policy):
+def evaluation(env, policy):
     
     policy.eval()
     
@@ -234,7 +234,7 @@ for episode in range(1, MAX_EPISODES+1):
     
     policy_loss, value_loss, train_reward = train(train_env, policy, optimizer, DISCOUNT_FACTOR, PPO_STEPS, PPO_CLIP)
     
-    test_reward = evaluate(test_env, policy)
+    test_reward = evaluation(test_env, policy)
     
     train_rewards.append(train_reward)
     test_rewards.append(test_reward)
@@ -251,7 +251,10 @@ for episode in range(1, MAX_EPISODES+1):
         print(f'Reached reward threshold in {episode} episodes')
         
         break
-
+        
+        
+        
+#plot graphs for test only can be generated for test too.
 plt.figure(figsize=(12,8))
 plt.plot(test_rewards, label='Test Reward')
 
